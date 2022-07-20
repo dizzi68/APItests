@@ -1,0 +1,31 @@
+# Below is a python script to grab a list of members in a clan and
+# indicate what role each member has. Personally identifiable info
+# has been removed, so you'll need an API key and a clan group ID.
+
+
+import requests
+
+# Removed my API key, sub in your own
+HEADERS = {"X-API-Key":'YOUR_API_KEY_HERE'}
+
+# Removed my clan ID, sub in whatever clan you would like info about.
+# Can be found in the URL when on the clan's page on bungie.net
+r = requests.get("https://www.bungie.net/Platform/GroupV2/YOUR_CLAN_GROUP_ID_HERE/Members/", headers=HEADERS);
+
+answer = r.json()
+
+for each in answer["Response"]["results"]:
+    if (each['memberType'] == 1):
+        print(each["destinyUserInfo"]["displayName"], "is a beginner.")
+    elif (each['memberType'] == 2):
+        print(each["destinyUserInfo"]["displayName"], "is a member.")
+    elif (each['memberType'] == 3):
+        print(each["destinyUserInfo"]["displayName"], "is an admin.")
+    elif (each['memberType'] == 4):
+        print(each["destinyUserInfo"]["displayName"], "is an acting founder.")
+    elif (each['memberType'] == 5):
+        print(each["destinyUserInfo"]["displayName"], "is our founder.")
+    # The above should cover all the basics, below if 0 populates
+    # or if additional roles are added
+    else:
+        print("Um...who are you,", each["destinyUserInfo"]["displayName"], "?")
