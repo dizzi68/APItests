@@ -1,0 +1,93 @@
+# Made the program generic, so it gathers clan ID as input rather than code.
+# Added a menu and the functionality to grab the clan name and list admins
+# specifically. I have the menu show the clan name, but there are still
+# bugs like showing 'None' when it pulls the name for the menu. Still needs
+# basic error handling for when a clan isn't found and more, but functional.
+
+
+import requests
+
+#dictionary to hold extra headers
+HEADERS = {"X-API-Key":YOUR_API_KEY_HERE}
+
+clanID = ""
+clanGeneralURL = "https://www.bungie.net/Platform/GroupV2/" + clanID
+clanMembersURL = "https://www.bungie.net/Platform/GroupV2/" + clanID + "/Members/"
+clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
+clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS)
+answer = clanMemberInfo.json()
+
+def clanRoles():
+    for each in answer["Response"]["results"]:
+        if (each['memberType'] == 1):
+            print(each["destinyUserInfo"]["displayName"], "is a beginner.")
+        elif (each['memberType'] == 2):
+            print(each["destinyUserInfo"]["displayName"], "is a member.")
+        elif (each['memberType'] == 3):
+            print(each["destinyUserInfo"]["displayName"], "is an admin.")
+        elif (each['memberType'] == 4):
+            print(each["destinyUserInfo"]["displayName"], "is an acting founder.")
+        elif (each['memberType'] == 5):
+            print(each["destinyUserInfo"]["displayName"], "is our founder.")
+        # The above should cover all the basics, below if 0 populates
+        # or if additional roles are added
+        else:
+            print("Um...who are you,", each["destinyUserInfo"]["displayName"], "?")
+
+def clanAdmin():
+    for each in answer["Response"]["results"]:
+        if (each['memberType'] == 3):
+            print(each['destinyUserInfo']['displayName'])
+
+def getClanID():
+    global clanID
+    clanID = input("Enter clan group ID: ")
+    # Reset all variables, requests that use clan ID to new clan ID
+    global clanMembersURL
+    global clanMemberInfo
+    global answer
+    clanMembersURL = "https://www.bungie.net/Platform/GroupV2/" + clanID + "/Members/"
+    clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS);
+    answer = clanMemberInfo.json()
+    global clanGeneralURL
+    global clanInfo
+    global clanInfoAnswer
+    clanGeneralURL = "https://www.bungie.net/Platform/GroupV2/" + clanID
+    clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
+    clanInfoAnswer = clanInfo.json()
+
+def getClanName():
+    print(clanInfoAnswer["Response"]["detail"]["name"])
+
+def menu():
+    global clanID
+    if clanID == "":
+        # If clanID hasn't been initialized
+        getClanID()
+        menu()
+    else:
+        selection = True
+        while selection:
+            # Print clan name, menu
+            print("\n")
+            print(
+            getClanName(),
+            """
+            1. Admin List
+            2. Member Roles
+            3. Change Clan
+            0. Quit
+            """)
+            selection = input("Enter selection: ")
+            if (selection == "1"):
+                clanAdmin()
+            elif (selection == "2"):
+                clanRoles()
+            elif (selection == "3"):
+                getClanID()
+            elif (selection == "0"):
+                selection = None
+            else:
+                print("Invalid Selection")
+
+menu()
