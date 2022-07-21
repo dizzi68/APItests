@@ -8,17 +8,18 @@
 import requests
 
 #dictionary to hold extra headers
-HEADERS = {"X-API-Key":YOUR_API_KEY_HERE}
+HEADERS = {"X-API-Key":''}
 
 clanID = ""
 clanGeneralURL = "https://www.bungie.net/Platform/GroupV2/" + clanID
 clanMembersURL = "https://www.bungie.net/Platform/GroupV2/" + clanID + "/Members/"
 clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
 clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS)
-answer = clanMemberInfo.json()
+clanMemberStr = clanMemberInfo.json()
+
 
 def clanRoles():
-    for each in answer["Response"]["results"]:
+    for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 1):
             print(each["destinyUserInfo"]["displayName"], "is a beginner.")
         elif (each['memberType'] == 2):
@@ -35,7 +36,7 @@ def clanRoles():
             print("Um...who are you,", each["destinyUserInfo"]["displayName"], "?")
 
 def clanAdmin():
-    for each in answer["Response"]["results"]:
+    for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 3):
             print(each['destinyUserInfo']['displayName'])
 
@@ -45,19 +46,23 @@ def getClanID():
     # Reset all variables, requests that use clan ID to new clan ID
     global clanMembersURL
     global clanMemberInfo
-    global answer
+    global clanMemberStr
     clanMembersURL = "https://www.bungie.net/Platform/GroupV2/" + clanID + "/Members/"
     clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS);
-    answer = clanMemberInfo.json()
+    clanMemberStr = clanMemberInfo.json()
     global clanGeneralURL
     global clanInfo
-    global clanInfoAnswer
+    global clanGenStr
     clanGeneralURL = "https://www.bungie.net/Platform/GroupV2/" + clanID
     clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
-    clanInfoAnswer = clanInfo.json()
+    clanGenStr = clanInfo.json()
 
 def getClanName():
-    print(clanInfoAnswer["Response"]["detail"]["name"])
+    return clanGenStr["Response"]["detail"]["name"]
+
+def getClanMotto():
+    return clanGenStr["Response"]["detail"]["motto"]
+
 
 def menu():
     global clanID
@@ -71,7 +76,11 @@ def menu():
             # Print clan name, menu
             print("\n")
             print(
+            """    """,
             getClanName(),
+            "\n",
+            """      """,
+            getClanMotto(),
             """
             1. Admin List
             2. Member Roles
