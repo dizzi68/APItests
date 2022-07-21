@@ -1,14 +1,7 @@
-# Made the program generic, so it gathers clan ID as input rather than code.
-# Added a menu and the functionality to grab the clan name and list admins
-# specifically. I have the menu show the clan name, but there are still
-# bugs like showing 'None' when it pulls the name for the menu. Still needs
-# basic error handling for when a clan isn't found and more, but functional.
-
-
 import requests
 
 #dictionary to hold extra headers
-HEADERS = {"X-API-Key":''}
+HEADERS = {"X-API-Key":'3f733b5c06054a62918526bab72520db'}
 
 clanID = ""
 clanGeneralURL = "https://www.bungie.net/Platform/GroupV2/" + clanID
@@ -17,30 +10,51 @@ clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
 clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS)
 clanMemberStr = clanMemberInfo.json()
 
+def clanRundown():
+    print(
+    " Name:", getClanName(), "\n",
+    "Motto:", getClanMotto(), "\n",
+    "Founder:", getClanFounder(), "\n",
+    "Number of Members:", getNumberMem(), "\n",
+    )
 
-def clanRoles():
+def getNumberMem():
+    number = 0
+    for each in clanMemberStr["Response"]["results"]:
+        number = number+1
+    return number       
+
+def getClanFounder():
+    for each in clanMemberStr["Response"]["results"]:
+        if (each['memberType'] == 5):
+            founder = each["destinyUserInfo"]["displayName"]
+            break
+    return founder
+
+def getClanRoles():
     for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 1):
-            print(each["destinyUserInfo"]["displayName"], "is a beginner.")
+            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a beginner.")
         elif (each['memberType'] == 2):
-            print(each["destinyUserInfo"]["displayName"], "is a member.")
+            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a member.")
         elif (each['memberType'] == 3):
-            print(each["destinyUserInfo"]["displayName"], "is an admin.")
+            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is an admin.")
         elif (each['memberType'] == 4):
-            print(each["destinyUserInfo"]["displayName"], "is an acting founder.")
+            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is an acting founder.")
         elif (each['memberType'] == 5):
-            print(each["destinyUserInfo"]["displayName"], "is our founder.")
+            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is the founder.")
         # The above should cover all the basics, below if 0 populates
         # or if additional roles are added
         else:
             print("Um...who are you,", each["destinyUserInfo"]["displayName"], "?")
 
 def clanAdmin():
+    print("\n Admins: \n")
     for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 3):
-            print(each['destinyUserInfo']['displayName'])
+            print("    ", each['destinyUserInfo']['displayName'])
 
-def getClanID():
+def inputClanID():
     global clanID
     clanID = input("Enter clan group ID: ")
     # Reset all variables, requests that use clan ID to new clan ID
@@ -64,11 +78,56 @@ def getClanMotto():
     return clanGenStr["Response"]["detail"]["motto"]
 
 
+
+def getMemberInfo():
+    inNum = -1
+    inNum = input("Enter number from member roles list: ")
+    print()
+    # Name
+    print("    Destiny Name:", clanMemberStr["Response"]["results"][int(inNum)]["destinyUserInfo"]["displayName"])
+    # Role
+    if (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 1):
+        print("    Role: Beginner")
+    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 2):
+        print("    Role: Member")
+    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 3):
+        print("    Role: Admin")
+    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 4):
+        print("    Role: Acting Founder")
+    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 5):
+        print("    Role: Founder")
+    else:
+        print("Not Found")
+    # Accounts - Loops through returned array to account for multiple playable accounts
+    print("    Accounts through:")
+    for each in clanMemberStr["Response"]["results"][int(inNum)]["destinyUserInfo"]["applicableMembershipTypes"]:
+        if (each == 1):
+            print("      Xbox ")
+        elif (each == 2):
+            print("      Playstation ")
+        elif (each == 3):
+            print("      Steam ")
+        elif (each == 4):
+            print("      Battle.net ") # Deprecated?
+        elif (each == 5):
+            print("      Stadia ")
+        elif (each == 10):
+           print("       Demon...? ")
+        elif (each == 254):
+            print("      Bungie_Next ")
+        else:
+            print("Unknown ")
+    onlineStatus = (clanMemberStr["Response"]["results"][int(inNum)]["isOnline"])
+    if (onlineStatus):
+        print("    Currently online")
+    else:
+        print("    Currently offline")
+
 def menu():
     global clanID
     if clanID == "":
         # If clanID hasn't been initialized
-        getClanID()
+        inputClanID()
         menu()
     else:
         selection = True
@@ -85,15 +144,21 @@ def menu():
             1. Admin List
             2. Member Roles
             3. Change Clan
+            4. Clan Info
+            5. Member Info
             0. Quit
             """)
             selection = input("Enter selection: ")
             if (selection == "1"):
                 clanAdmin()
             elif (selection == "2"):
-                clanRoles()
+                getClanRoles()
             elif (selection == "3"):
-                getClanID()
+                inputClanID()
+            elif (selection == "4"):
+                clanRundown()
+            elif (selection == "5"):
+                getMemberInfo()
             elif (selection == "0"):
                 selection = None
             else:
