@@ -10,6 +10,7 @@ clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
 clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS)
 clanMemberStr = clanMemberInfo.json()
 
+# Basic clan info
 def clanRundown():
     print(
     " Name:", getClanName(), "\n",
@@ -18,12 +19,14 @@ def clanRundown():
     "Number of Members:", getNumberMem(), "\n",
     )
 
+# Getter for number of members
 def getNumberMem():
     number = 0
     for each in clanMemberStr["Response"]["results"]:
         number = number+1
     return number       
 
+# Getter for clan founder
 def getClanFounder():
     for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 5):
@@ -31,7 +34,9 @@ def getClanFounder():
             break
     return founder
 
-def getClanRoles():
+# Prints a roster along with identifiable numbers and role for each member
+# This number is just the index, which works well with other functions
+def roster():
     for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 1):
             print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a beginner.")
@@ -48,16 +53,79 @@ def getClanRoles():
         else:
             print("Um...who are you,", each["destinyUserInfo"]["displayName"], "?")
 
+# Prints just the admins, noting the founder
 def clanAdmin():
     print("\n Admins: \n")
     for each in clanMemberStr["Response"]["results"]:
         if (each['memberType'] == 3):
             print("    ", each['destinyUserInfo']['displayName'])
+        if (each['memberType'] == 5):
+            print("    ", each['destinyUserInfo']['displayName'], "(Founder)")
 
+
+# Gathers the clan ID and refreshes the data the first time menu is called, then any time the clan is changed
 def inputClanID():
     global clanID
     clanID = input("Enter clan group ID: ")
     # Reset all variables, requests that use clan ID to new clan ID
+    refresh()
+
+# Getter for clan name
+def getClanName():
+    return clanGenStr["Response"]["detail"]["name"]
+
+# Getter for clan motto
+def getClanMotto():
+    return clanGenStr["Response"]["detail"]["motto"]
+
+# Prints a short list of member specific info
+def getMemberInfo():
+    global activeMember
+    inNum = input("Enter number from roster: ")
+    # Create location to store current member, for use in other functions
+    activeMember = int(inNum)
+    print()
+    # Name
+    print("    Destiny Name:", getMemberName())
+    # Role
+    print("    Role:", getMemberRole())
+    # Accounts - Loops through returned array to account for multiple playable accounts
+    print("    Accounts:\n     ", getMemberAccounts())
+    # Online Status
+    if (clanMemberStr["Response"]["results"][activeMember]["isOnline"]):
+        print("    Currently online")
+    else:
+        print("    Currently offline")
+
+# Pulls up the names of whomever is online. Must use the refresh menu option for updated list
+def clanOnline():
+    print("\n    Online Players:")
+    for each in clanMemberStr["Response"]["results"]:
+        if each["isOnline"] == True:
+            print("      ", each["destinyUserInfo"]["displayName"])
+
+######TODO######
+# Option to get additional info about an individual member
+# WIP
+def memberMenu():
+    global activeMember
+    mType = str(clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["membershipType"])
+    mID = str(clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["membershipId"])
+    compValue = "100"
+    params = "?components=" + compValue
+    memberURL = "https://www.bungie.net/Platform/Destiny2/" + mType + "/Profile/" + mID + "/" + params
+    memberInfo = requests.get(memberURL, headers=HEADERS)
+    memberStr = memberInfo.json()
+    print(memberStr)
+    print(memberURL)
+    print("\n")
+
+# Prevents auto-refreshing too often, given the amount of data gathered
+# Requires manual refresh for up to date items like online status,
+# but maintains speed when looking up other, effectively static info already gathered
+# Included in other functions when auto refresh is obviously needed ie new clan
+def refresh():
+    global clanID
     global clanMembersURL
     global clanMemberInfo
     global clanMemberStr
@@ -71,62 +139,54 @@ def inputClanID():
     clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
     clanGenStr = clanInfo.json()
 
-def getClanName():
-    return clanGenStr["Response"]["detail"]["name"]
+# Getter for member name
+def getMemberName():
+    memberName = clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["displayName"]
+    return memberName
 
-def getClanMotto():
-    return clanGenStr["Response"]["detail"]["motto"]
-
-
-
-def getMemberInfo():
-    inNum = -1
-    inNum = input("Enter number from member roles list: ")
-    print()
-    # Name
-    print("    Destiny Name:", clanMemberStr["Response"]["results"][int(inNum)]["destinyUserInfo"]["displayName"])
-    # Role
-    if (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 1):
-        print("    Role: Beginner")
-    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 2):
-        print("    Role: Member")
-    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 3):
-        print("    Role: Admin")
-    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 4):
-        print("    Role: Acting Founder")
-    elif (clanMemberStr["Response"]["results"][int(inNum)]["memberType"] == 5):
-        print("    Role: Founder")
+# Getter for member role
+def getMemberRole():
+    if (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 1):
+        return "Beginner"
+    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 2):
+        return "Member"
+    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 3):
+        return "Admin"
+    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 4):
+        return "Acting Founder"
+    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 5):
+        return "Founder"
     else:
-        print("Not Found")
-    # Accounts - Loops through returned array to account for multiple playable accounts
-    print("    Accounts through:")
-    for each in clanMemberStr["Response"]["results"][int(inNum)]["destinyUserInfo"]["applicableMembershipTypes"]:
+        return "No role found"
+
+# Getter for member accounts. Returns array as there may be multiple
+def getMemberAccounts():
+    global activeMember
+    accounts = []
+    for each in clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["applicableMembershipTypes"]:
         if (each == 1):
-            print("      Xbox ")
+            accounts.append("Xbox")
         elif (each == 2):
-            print("      Playstation ")
+            accounts.append("PlayStation")
         elif (each == 3):
-            print("      Steam ")
+            accounts.append("Steam")
         elif (each == 4):
-            print("      Battle.net ") # Deprecated?
+            accounts.append("Battle.net") # Deprecated?
         elif (each == 5):
-            print("      Stadia ")
+            accounts.append("Stadia")
         elif (each == 10):
-           print("       Demon...? ")
+            accounts.append("Demon...?")
         elif (each == 254):
-            print("      Bungie_Next ")
+            accounts.append("Bungie Next")
         else:
-            print("Unknown ")
-    onlineStatus = (clanMemberStr["Response"]["results"][int(inNum)]["isOnline"])
-    if (onlineStatus):
-        print("    Currently online")
-    else:
-        print("    Currently offline")
+            accounts.append("Unknown")
+    return accounts
 
+# Base menu
 def menu():
     global clanID
     if clanID == "":
-        # If clanID hasn't been initialized
+        # If clanID hasn't been initialized ie first time menu() called
         inputClanID()
         menu()
     else:
@@ -135,33 +195,43 @@ def menu():
             # Print clan name, menu
             print("\n")
             print(
-            """    """,
+            "    ",
             getClanName(),
             "\n",
-            """      """,
+            "      ",
             getClanMotto(),
             """
-            1. Admin List
-            2. Member Roles
-            3. Change Clan
-            4. Clan Info
-            5. Member Info
-            0. Quit
+            1. Clan Info
+            2. Roster
+            3. Member Info
+            4. Admin List
+            5. Players Online
+            6. Refresh Info
+            7. Change Clan
+            0. Exit Menu
+            00. Exit Python
             """)
             selection = input("Enter selection: ")
             if (selection == "1"):
-                clanAdmin()
-            elif (selection == "2"):
-                getClanRoles()
-            elif (selection == "3"):
-                inputClanID()
-            elif (selection == "4"):
                 clanRundown()
-            elif (selection == "5"):
+            elif (selection == "2"):
+                roster()
+            elif (selection == "3"):
                 getMemberInfo()
+            elif (selection == "4"):
+                clanAdmin()
+            elif (selection == "5"):
+                clanOnline()
+            elif (selection == "6"):
+                refresh()
+            elif (selection == "7"):
+                inputClanID()
             elif (selection == "0"):
                 selection = None
+            elif (selection == "00"):
+                quit()
             else:
                 print("Invalid Selection")
+                menu()
 
 menu()
