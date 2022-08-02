@@ -9,6 +9,11 @@ clanMembersURL = "https://www.bungie.net/Platform/GroupV2/" + clanID + "/Members
 clanInfo = requests.get(clanGeneralURL, headers=HEADERS)
 clanMemberInfo = requests.get(clanMembersURL, headers=HEADERS)
 clanMemberStr = clanMemberInfo.json()
+mType = 0
+mID = 0
+memberURL = "https://www.bungie.net/Platform/Destiny2/" + mType + "/Profile/" + mID + "/" + params
+memberInfo = requests.get(memberURL, headers=HEADERS)
+memberStr = memberInfo.json()
 
 # Basic clan info
 def clanRundown():
@@ -38,20 +43,20 @@ def getClanFounder():
 # This number is just the index, which works well with other functions
 def roster():
     for each in clanMemberStr["Response"]["results"]:
-        if (each['memberType'] == 1):
-            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a beginner.")
-        elif (each['memberType'] == 2):
-            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a member.")
-        elif (each['memberType'] == 3):
-            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is an admin.")
-        elif (each['memberType'] == 4):
-            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is an acting founder.")
-        elif (each['memberType'] == 5):
-            print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is the founder.")
-        # The above should cover all the basics, below if 0 populates
-        # or if additional roles are added
-        else:
-            print("Um...who are you,", each["destinyUserInfo"]["displayName"], "?")
+        memType = each["memberType"]
+        match memType:
+            case 1:
+                print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a beginner.")
+            case 2:
+                print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is a member.")
+            case 3:
+                print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is an admin.")
+            case 4:
+                print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is an acting founder.")
+            case 5:
+                print(clanMemberStr["Response"]["results"].index(each), each["destinyUserInfo"]["displayName"], "is the founder.")
+            case _:
+                print("Well this is embarrassing...", each["destinyUserInfo"]["displayName"], "has no role.")
 
 # Prints just the admins, noting the founder
 def clanAdmin():
@@ -96,6 +101,7 @@ def getMemberInfo():
         print("    Currently online")
     else:
         print("    Currently offline")
+    memberMenu()
 
 # Pulls up the names of whomever is online. Must use the refresh menu option for updated list
 def clanOnline():
@@ -104,21 +110,70 @@ def clanOnline():
         if each["isOnline"] == True:
             print("      ", each["destinyUserInfo"]["displayName"])
 
-######TODO######
-# Option to get additional info about an individual member
-# WIP
 def memberMenu():
     global activeMember
+    global memberStr
+    global mType
+    global mID
     mType = str(clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["membershipType"])
     mID = str(clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["membershipId"])
-    compValue = "100"
+    compValue = "200"
     params = "?components=" + compValue
     memberURL = "https://www.bungie.net/Platform/Destiny2/" + mType + "/Profile/" + mID + "/" + params
     memberInfo = requests.get(memberURL, headers=HEADERS)
     memberStr = memberInfo.json()
-    print(memberStr)
-    print(memberURL)
     print("\n")
+    selection = True
+    print(memberStr)
+    while selection:
+        print(getMemberName())
+        print("""
+            1. Characters
+            0. Main Menu
+            """)
+        selection = input("Enter selection: ")
+        print()
+        match selection:
+            case "1":
+                charInfo()
+            
+            
+            case "0":
+                selection = False
+            case _:
+                print("Invalid Selection")
+
+def charInfo():
+    global memberStr
+    for each in memberStr["Response"]["characters"]["data"]:
+        cRace = memberStr["Response"]["characters"]["data"][each]["raceType"]
+        match cRace:
+            case 0:
+                race = "Human"
+            case 1:
+                race = "Awoken"
+            case 2:
+                race = "Exo"
+        cClass = memberStr["Response"]["characters"]["data"][each]["classType"]
+        match cClass:
+            case 0:
+                classT = "Titan"
+            case 1:
+                classT = "Hunter"
+            case 2:
+                classT = "Warlock"
+        cGender = memberStr["Response"]["characters"]["data"][each]["genderType"]
+        match cGender:
+            case 0:
+                gender = "Male"
+            case 1:
+                gender = "Female"
+        minutesPlayed = int(memberStr["Response"]["characters"]["data"][each]["minutesPlayedTotal"])
+        hoursPlayed = int(minutesPlayed/60)
+        minutesRemPlayed = (minutesPlayed%60)
+        print(gender, race, classT)
+        print("Power level:", memberStr["Response"]["characters"]["data"][each]["light"])
+        print("Time played:", hoursPlayed, "hours and", minutesRemPlayed, "minutes\n")
 
 # Prevents auto-refreshing too often, given the amount of data gathered
 # Requires manual refresh for up to date items like online status,
@@ -146,41 +201,45 @@ def getMemberName():
 
 # Getter for member role
 def getMemberRole():
-    if (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 1):
-        return "Beginner"
-    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 2):
-        return "Member"
-    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 3):
-        return "Admin"
-    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 4):
-        return "Acting Founder"
-    elif (clanMemberStr["Response"]["results"][activeMember]["memberType"] == 5):
-        return "Founder"
-    else:
-        return "No role found"
+    memberType = clanMemberStr["Response"]["results"][activeMember]["memberType"]
+    match memberType:
+        case 1:
+            return "Beginner"
+        case 2:
+            return "Member"
+        case 3:
+            return "Admin"
+        case 4:
+            return "Acting Founder"
+        case 5:
+            return "Founder"
+        case _:
+            return "Role not found"
 
 # Getter for member accounts. Returns array as there may be multiple
 def getMemberAccounts():
     global activeMember
     accounts = []
-    for each in clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["applicableMembershipTypes"]:
-        if (each == 1):
+    platform = clanMemberStr["Response"]["results"][activeMember]["destinyUserInfo"]["applicableMembershipTypes"]
+    match platform:
+        case 1:
             accounts.append("Xbox")
-        elif (each == 2):
+        case 2:
             accounts.append("PlayStation")
-        elif (each == 3):
+        case 3:
             accounts.append("Steam")
-        elif (each == 4):
+        case 4:
             accounts.append("Battle.net") # Deprecated?
-        elif (each == 5):
+        case 5:
             accounts.append("Stadia")
-        elif (each == 10):
+        case 10:
             accounts.append("Demon...?")
-        elif (each == 254):
+        case 254:
             accounts.append("Bungie Next")
-        else:
+        case _:
             accounts.append("Unknown")
     return accounts
+   
 
 # Base menu
 def menu():
@@ -212,26 +271,28 @@ def menu():
             00. Exit Python
             """)
             selection = input("Enter selection: ")
-            if (selection == "1"):
-                clanRundown()
-            elif (selection == "2"):
-                roster()
-            elif (selection == "3"):
-                getMemberInfo()
-            elif (selection == "4"):
-                clanAdmin()
-            elif (selection == "5"):
-                clanOnline()
-            elif (selection == "6"):
-                refresh()
-            elif (selection == "7"):
-                inputClanID()
-            elif (selection == "0"):
-                selection = None
-            elif (selection == "00"):
-                quit()
-            else:
-                print("Invalid Selection")
-                menu()
+            print()
+            match selection:
+                case "1":
+                    clanRundown()
+                case "2":
+                    roster()
+                case "3":
+                    getMemberInfo()
+                case "4":
+                    clanAdmin()
+                case "5":
+                    clanOnline()
+                case "6":
+                    refresh()
+                case "7":
+                    inputClanID()
+                case "0":
+                    selection = None
+                case "00":
+                    quit()
+                case _:
+                    print("Invalid Selection")
+                    menu()
 
 menu()
