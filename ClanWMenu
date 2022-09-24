@@ -1,6 +1,6 @@
 import requests
 
-#dictionary to hold extra headers
+# Headers, insert your API key here
 HEADERS = {"X-API-Key":''}
 
 clanID = ""
